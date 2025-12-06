@@ -14,12 +14,9 @@
     "background": {
         "service_worker": "service_worker.js"
     },
-    "action": {
-        "default_popup": "popup.html"
-    },
     "chrome_url_overrides": {},
     "web_accessible_resources": [{
-        "resources": ["study.html"],
+        "resources": ["study.html", "study.js"],
         "matches": ["chrome-extension://*/*"]
     }]
 }
