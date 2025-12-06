@@ -1,0 +1,25 @@
+{
+    "manifest_version": 3,
+    "name": "Anki Enforcer",
+    "version": "0.1",
+    "permissions": [
+        "tabs",
+        "storage",
+        "alarms",
+        "webNavigation"
+    ],
+    "host_permissions": [
+        "https://ankiweb.net/*"
+    ],
+    "background": {
+        "service_worker": "service_worker.js"
+    },
+    "action": {
+        "default_popup": "popup.html"
+    },
+    "chrome_url_overrides": {},
+    "web_accessible_resources": [{
+        "resources": ["study.html"],
+        "matches": ["<all_urls"]
+    }]
+}
