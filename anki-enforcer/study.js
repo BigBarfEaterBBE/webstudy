@@ -12,19 +12,32 @@ const cardDiv = document.getElementById("card");
 
 function renderCard() {
     let card = cards[index];
-    cardDiv.innerHTML = `
-    <h2>${showingBack ? card.back : card.front}</h2>
-    <button onclick="flipCard()">Flip</button>
-    ${showingBack ? '<button onclick="nextCard()">Next</button>' : ""}
-  ` ;
+    cardDiv.innerHTML = `<h2>${showingBack ? card.back : card.front}</h2>
+    <div id="buttons"></div>
+  `;
+    const buttonsDiv = document.getElementById("buttons");
+
+    //flip button
+    const flipBtn = document.createElement("button");
+    flipBtn.textContent = "Flip";
+    flipBtn.addEventListener("click", flipCard);
+    buttonsDiv.appendChild(flipBtn);
+    
+    //next button
+    if (showingBack) {
+        const nextBtn = document.createElement("button");
+        nextBtn.textContent = "Next";
+        nextBtn.addEventListener("click", nextCard);
+        buttonsDiv.appendChild(nextBtn);
+    }
 }
 
-window.flipCard = function () {
+function flipCard() {
     showingBack = true;
     renderCard();
 };
 
-window.nextCard = function () {
+function nextCard() {
     index++;
     showingBack = false;
 

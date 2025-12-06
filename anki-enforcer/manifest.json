@@ -20,6 +20,6 @@
     "chrome_url_overrides": {},
     "web_accessible_resources": [{
         "resources": ["study.html"],
-        "matches": ["<all_urls"]
+        "matches": ["chrome-extension://*/*"]
     }]
 }
