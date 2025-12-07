@@ -1,18 +1,21 @@
 let numberOfCards = 5;
 let bgColor = "#111"
+let selectedDecks = ["Default"]
 
 //load storage
-chrome.storage.sync.get(["numCards", "bgColor"], (data) => {
+chrome.storage.sync.get(["numCards", "bgColor", "selectedDecks"], (data) => {
     if (data.numCards) numberOfCards = parseInt(data.numCards);
     if (data.bgColor) {
         bgColor = data.bgColor;
         applyTheme(bgColor);
-    }
+    };
+    if (data.selectedDecks) selectedDecks = data.selectedDecks;
 });
 
 chrome.runtime.onMessage.addListener((message) => {
     if (message.type === "settingsUpdated") {
-        const { numCards, bgColor} = message.settings;
+        const { numCards, bgColor, selectedDecks: newDecks} = message.settings;
+        selectedDecks = newDecks;
         //update local
         const newCardCount = parseInt(numCards);
         applyTheme(bgColor);
@@ -65,7 +68,10 @@ const reviewRow = document.getElementById("reviewRow");
 //load X cards
 async function loadCards() {
     console.log("Fetching due cards...");
-    let ids = await anki("findCards", { query: "is:review" });
+    //create query for AnkiConnect
+    let deckQuery = selectedDecks.map(deck => `deck:${deck}`).join(" OR ");
+    let query = deckQuery + " is:review"; //only due cards
+    let ids = await anki("findCards", { query });
     console.log("Found card IDs:", ids);
     //take first X cards
     cardQueue = ids.slice(0, numberOfCards);
