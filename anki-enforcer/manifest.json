@@ -17,7 +17,7 @@
     },
     "chrome_url_overrides": {},
     "web_accessible_resources": [{
-        "resources": ["study.html", "study.js"],
+        "resources": ["study.html", "study.js", "settings.html", "settings.js"],
         "matches": ["*://*/*"]
     }]
 }

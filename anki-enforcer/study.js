@@ -1,3 +1,13 @@
+let numberOfCards = 5;
+let bgColor = "#111"
+
+//load storage
+chrome.storage.sync.get(["numCards", "bgColor"], (data) => {
+    if (data.numCards) numberOfCards = parseInt(data.numCards);
+    if (data.bgColor) bgColor = parseInt(data.bgColor);
+    document.body.style.background = bgColor;
+});
+
 //call ankiconnect
 async function anki(action, params = {}) {
     const response = await fetch("http://127.0.0.1:8765", {
@@ -27,7 +37,6 @@ async function loadCards() {
     console.log("Fetching due cards...");
     let ids = await anki("findCards", { query: "is:review" });
     console.log("Found card IDs:", ids);
-    let numberOfCards = 5;
     //take first X cards
     cardQueue = ids.slice(0, numberOfCards);
     if (cardQueue.length === 0) {
@@ -80,6 +89,11 @@ reviewRow.querySelectorAll("button").forEach(btn => {
     btn.addEventListener("click", () => {
         sendReview(parseInt(btn.dataset.ease));
     });
+});
+
+const settingsBtn = document.getElementById("settingsBtn");
+settingsBts.addEventListener("click", () => {
+    window.open(chrome.runtime.getURL("settings.html"), "Settings", "width=300,height=250");
 });
 
 loadCards();
