@@ -4,9 +4,39 @@ let bgColor = "#111"
 //load storage
 chrome.storage.sync.get(["numCards", "bgColor"], (data) => {
     if (data.numCards) numberOfCards = parseInt(data.numCards);
-    if (data.bgColor) bgColor = parseInt(data.bgColor);
-    document.body.style.background = bgColor;
+    if (data.bgColor) {
+        bgColor = data.bgColor;
+        applyTheme(bgColor);
+    }
 });
+
+chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === "settingsUpdated") {
+        const { numCards, bgColor} = message.settings;
+        //update local
+        const newCardCount = parseInt(numCards);
+        applyTheme(bgColor);
+        //appl
+        document.body.style.background = bgColor;
+        if (newCardCount !== numberOfCards) {
+            numberOfCards = newCardCount;
+            cardQueue = [];
+            currentCardIndex = 0;
+            loadCards();
+        }
+        document.querySelector("h1").textContent = `Study ${numberOfCards} Anki Cards`;
+        console.log("Live settings applied: ", message.settings);
+    }
+});
+
+function applyTheme(color) {
+    document.body.classList.remove("light-mode", "dark-mode");
+    if (color === "#fff") {
+        document.body.classList.add("light-mode");
+    } else {
+        document.body.classList.add("dark-mode");
+    }
+}
 
 //call ankiconnect
 async function anki(action, params = {}) {
@@ -92,7 +122,7 @@ reviewRow.querySelectorAll("button").forEach(btn => {
 });
 
 const settingsBtn = document.getElementById("settingsBtn");
-settingsBts.addEventListener("click", () => {
+settingsBtn.addEventListener("click", () => {
     window.open(chrome.runtime.getURL("settings.html"), "Settings", "width=300,height=250");
 });
 

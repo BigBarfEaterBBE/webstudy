@@ -111,6 +111,17 @@ async function unlockBrowser() {
     savedTabs = [];
 }
 
-chrome.runtime.onMessage.addListener((msg) => {
-    if (msg === "unlock") unlockBrowser();
-});
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.type === "settingsUpdated") {
+        chrome.tabs.query({}, (tabs) => {
+            tabs.forEach(tab => {
+                if (tab.url && tab.url.includes("study.html")) {
+                    chrome.tabs.sendMessage(tab.id, msg);
+                }
+            });
+        });
+    }
+    if (msg === "unlock") {
+        unlockBrowser();
+    }
+})

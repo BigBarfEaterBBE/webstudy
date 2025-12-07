@@ -11,10 +11,16 @@ chrome.storage.sync.get(["numCards", "bgColor"], (data) => {
 
 //save settings
 saveBtn.addEventListener("click", () => {
-    chrome.storage.sync.set({
+    const settings = {
         numCards: numCardsSelect.value,
         bgColor: bgColorSelect.value
-    }, () => {
+    };
+    chrome.storage.sync.set(settings, () => {
+        //send to service worker
+        chrome.runtime.sendMessage({
+            type: "settingsUpdated",
+            settings
+        });
         alert("Settings saved");
     });
 });
