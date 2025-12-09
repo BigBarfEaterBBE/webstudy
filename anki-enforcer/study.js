@@ -3,13 +3,22 @@ let bgColor = "#111"
 let selectedDecks = ["Default"]
 
 //load storage
-chrome.storage.sync.get(["numCards", "bgColor", "selectedDecks"], (data) => {
+chrome.storage.sync.get(["numCards", "bgColor", "selectedDecks"], async (data) => {
     if (data.numCards) numberOfCards = parseInt(data.numCards);
     if (data.bgColor) {
         bgColor = data.bgColor;
         applyTheme(bgColor);
     };
     if (data.selectedDecks) selectedDecks = data.selectedDecks;
+    if (!selectedDecks ||  selectedDecks.length === 0) {
+        try {
+            const decks = await anki("deckNames");
+            selectedDecks = decks; // select all decks bby default
+        } catch (e) {
+            console.warn("Could not fetch decks from anki: ", e);
+            selectedDecks = [];
+        }
+    }
 });
 
 chrome.runtime.onMessage.addListener((message) => {
@@ -69,10 +78,18 @@ const reviewRow = document.getElementById("reviewRow");
 async function loadCards() {
     console.log("Fetching due cards...");
     //create query for AnkiConnect
-    let deckQuery = selectedDecks.map(deck => `deck:${deck}`).join(" OR ");
-    let query = deckQuery + " is:review"; //only due cards
+    if (!selectedDecks || selectedDecks.length === 0) {
+        cardDiv.innerHTML = "<p>No decks available. Is Anki Running? </p>";
+        return;
+    }
+    let deckQuery = selectedDecks.map(deck => `deck:"${deck}"`).join(" OR ");
+    let query = deckQuery + " (is:review OR is:due)"; //only due cards
     let ids = await anki("findCards", { query });
     console.log("Found card IDs:", ids);
+    if (!ids || ids.length === 0) {
+        cardDiv.innerHTML = "<p>No due cards found in selected decks. </p>";
+        return;
+    }
     //take first X cards
     cardQueue = ids.slice(0, numberOfCards);
     if (cardQueue.length === 0) {

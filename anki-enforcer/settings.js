@@ -34,7 +34,7 @@ async function fetchDecks(savedDecks) {
     } catch (e) {
         console.error("failed to fetch decks from anki: ", e);
         deckContainer.innerHTML = "<p>Failed to load decks.</p>"
-        return;
+        decks = ["Default"];
     }
     //populate after fetch
     deckContainer.innerHTML = "";
