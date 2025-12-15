@@ -30,10 +30,14 @@ chrome.runtime.onMessage.addListener((message) => {
         applyTheme(bgColor);
         //appl
         document.body.style.background = bgColor;
-        if (newCardCount !== numberOfCards) {
+        const decksChanged = JSON.stringify(newDecks) !== Json.stringify(selectedDecks);
+        selectedDecks = newDecks;
+        if (newCardCount !== numberOfCards || decksChanged) {
             numberOfCards = newCardCount;
             cardQueue = [];
             currentCardIndex = 0;
+            currentCard = null;
+            cardDiv.innerHTML = "<p>Reloading cards</p>";
             loadCards();
         }
         document.querySelector("h1").textContent = `Study ${numberOfCards} Anki Cards`;
@@ -83,11 +87,16 @@ async function loadCards() {
         return;
     }
     let deckQuery = selectedDecks.map(deck => `deck:"${deck}"`).join(" OR ");
-    let query = deckQuery + " (is:review OR is:due)"; //only due cards
+    let query = `(${deckQuery})`; //only due cards
+    console.log("Decks being queried:", selectedDecks);
+    console.log("Anki query:", query);
+
     let ids = await anki("findCards", { query });
     console.log("Found card IDs:", ids);
     if (!ids || ids.length === 0) {
         cardDiv.innerHTML = "<p>No due cards found in selected decks. </p>";
+        flipBtn.style.display = "none";
+        reviewRow.style.display = "none";
         return;
     }
     //take first X cards
@@ -149,4 +158,30 @@ settingsBtn.addEventListener("click", () => {
     window.open(chrome.runtime.getURL("settings.html"), "Settings", "width=300,height=250");
 });
 
-loadCards();
+async function initStudy() {
+    const data = await chrome.storage.sync.get([
+        "numCards",
+        "bgColor",
+        "selectedDecks"
+    ]);
+    if (data.numCards) numberOfCards = parseInt(data.numCards);
+    if (data.bgColor) {
+        bgColor = data.bgColor;
+        applyTheme(bgColor);
+    }
+    if (data.selectedDecks && data.selectedDecks.length > 0) {
+        selectedDecks = data.selectedDecks;
+    } else {
+        try {
+            selectedDecks = await anki("deckNames");
+        } catch (e) {
+            console.error("Anki not available", e);
+            cardDiv.innerHTML = "<p>Start Anki first</p>";
+            return;
+        }
+    }
+    console.log("Final selected decks:", selectedDecks);
+    loadCards();
+}
+
+initStudy();
