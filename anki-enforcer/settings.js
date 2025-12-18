@@ -71,7 +71,11 @@ function loadSettings(numCardsSelect,bgColorSelect,deckContainer,saveBtn) {
             selectedDecks
         }, () => {
             document.getElementById("settingsOverlay")?.classList.remove("active");
-            chrome.runtime.sendMessage({ type: "closeSettings" });
+            chrome.runtime.sendMessage({ type: "settingsUpdated", settings: {
+                numCards: numCardsSelect.value,
+                bgColor: bgColorSelect.value,
+                selectedDecks
+            }});
             //notify study tab to apply immediately
             chrome.runtime.sendMessage({ type: "settingsUpdated", settings: {
                 numCards: numCardsSelect.value,

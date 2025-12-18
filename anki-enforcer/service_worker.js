@@ -8,9 +8,28 @@ service_worker.js:
 */
 const LOCK_INTERVAL_MINUTES = 1;
 
+let lockEnabled = true;
 let isLocked = false;
 let savedTabs = [];
 let studyTabId;
+let studyPort = null;
+
+chrome.runtime.onConnect.addListener((port) => {
+    if (port.name === "study-session") {
+        console.log("study port conencted");
+        studyPort = port;
+        port.onDisconnect.addListener(() => {
+            console.log("study port disconnected");
+            studyPort = null;
+        });
+        port.onMessage.addListener((msg) => {
+            if (msg.type === "unlock") {
+                console.log("unlock msg recieved via port");
+                unlockBrowser();
+            }
+        });
+    }
+});
 
 
 const MIN_STARTUP_DELAY = LOCK_INTERVAL_MINUTES * 60 * 1000
@@ -46,6 +65,7 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name !== "ankiLock") return;
+    if (!lockEnabled) return;
     const { extensionStartTime } = await chrome.storage.local.get("extensionStartTime");
     if (!extensionStartTime) {
         console.log("no stored startup time - allowing lock");
@@ -98,7 +118,13 @@ async function lockBrowser() {
 
 //unlock + restore prev tabs
 async function unlockBrowser() {
+    console.log("UNLOCKING BROWSER");
     isLocked = false;
+    lockEnabled = false;
+    chrome.alarms.clearAll();
+    await chrome.storage.local.set({
+        extensionStartTime: Date.now()
+    });
     //restore tabs
     for (const url of savedTabs) {
         chrome.tabs.create({ url });
@@ -109,6 +135,10 @@ async function unlockBrowser() {
     }
 
     savedTabs = [];
+    setTimeout(() => {
+        lockEnabled = true;
+        createAnkiAlarm();
+    }, 5000); //5s 
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -121,7 +151,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             });
         });
     }
-    if (msg === "unlock") {
+    if (msg?.type === "unlock") {
+        console.log("Unlock msg recieved");
         unlockBrowser();
+        sendResponse({ ok: true });
+        return true;
     }
 })

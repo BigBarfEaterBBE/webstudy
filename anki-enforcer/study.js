@@ -1,3 +1,6 @@
+const studyPort = chrome.runtime.connect({ name: "study-session" });
+
+let reviewedCardIds = new Set();
 let numberOfCards = 5;
 let bgColor = "#111"
 let selectedDecks = ["Default"]
@@ -26,6 +29,7 @@ chrome.runtime.onMessage.addListener((message) => {
     if (message.type === "settingsUpdated") {
         const { numCards, bgColor, selectedDecks: newDecks} = message.settings;
         const decksChanged = JSON.stringify(newDecks) !== JSON.stringify(selectedDecks);
+        closeSettings();
         //update local
         const newCardCount = parseInt(numCards);
         applyTheme(bgColor);
@@ -42,9 +46,6 @@ chrome.runtime.onMessage.addListener((message) => {
         }
         document.querySelector("h1").textContent = `Study ${numberOfCards} Anki Cards`;
         console.log("Live settings applied: ", message.settings);
-    }
-    if (message.type === "closeSettings") {
-        closeSettings();
     }
 });
 
@@ -95,6 +96,7 @@ async function loadCards() {
     console.log("Anki query:", query);
 
     let ids = await anki("findCards", { query });
+    ids = ids.filter(id => !reviewedCardIds.has(id));
     console.log("Found card IDs:", ids);
     if (!ids || ids.length === 0) {
         cardDiv.innerHTML = "<p>No due cards found in selected decks. </p>";
@@ -139,21 +141,37 @@ function flipCard() {
 
 //handle sending info back to anki
 async function sendReview(ease) {
-    await anki("answerCards", {
-        answers: [{
-            cardId: currentCard.cardId,
-            ease: ease
-        }]
-    });
+    try {
+        await anki("answerCards", {
+            answers: [{
+                cardId: currentCard.cardId,
+                ease: ease
+            }]
+        });
+    } catch (e) {
+        console.warn("Anki rejected answer, skipping:", e.message);
+    }
+    reviewedCardIds.add(currentCard.cardId);
     cardsCompletedThisSession++;
     currentCardIndex++;
     loadNextCard();
 }
 
 function finishStudy() {
+    reviewedCardIds.clear();
     cardsCompletedThisSession = 0;
     cardDiv.innerHTML = "<h2>Done!</h2><p>Unlocking...</p>";
-    chrome.runtime.sendMessage({ type: "unlock" });
+    if (studyPort) {
+        try {
+            studyPort.postMessage({ type: "unlock" });
+        } catch (e) {
+            console.warn("Port failed, falling back to sendMessage");
+            chrome.runtime.sendMessage({ type: "unlock" });
+        }
+    } else {
+        console.warn("No port");
+        chrome.runtime.sendMessage({ type: "unlock" });
+    }
 }
 
 flipBtn.addEventListener("click", flipCard);
