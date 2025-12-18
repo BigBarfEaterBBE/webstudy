@@ -68,6 +68,35 @@
                 background: white;
                 color: black;
             }
+
+            #settingsOverlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.75);
+                display: none;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+            }
+
+            #settingsOverlay.active {
+                display: flex;
+            }
+
+            #settingsPanel {
+                background: black;
+                color: white;
+                padding: 20px;
+                width: 300px;
+                border-radius: 12px;
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .hidden {
+                display: none;
+            }
         </style>
     </head>
     <body>
@@ -83,6 +112,33 @@
             <button data-ease="4">Easy</button>
         </div>
         <button id="settingsBtn" style="position:absolute; top:10px; right: 10px; padding: 6px 12px; font-size: 14px; border-radius: 6px; cursor: pointer">⚙️ Settings</button>
+        <div id="settingsOverlay">
+            <div id="settingsPanel">
+                <h3>Settings</h3>
+                <label>
+                    Cards per session:
+                    <select id="numCards">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="15">15</option>
+                    </select>
+                </label>
+                <label>
+                    Background:
+                    <select id="bgColor">
+                        <option value="#111">Dark</option>
+                        <option value="#fff">Light</option>
+                    </select>
+                </label>
+                <strong>Decks:</strong>
+                <div id="deckContainer"></div>
+                <div class="btn-row">
+                    <button id="saveBtn">Save</button>
+                    <button id="closeSettings">Close</button>
+                </div>
+            </div>
+        </div>
         <script src="study.js" type="module"></script>
+        <script src="settings.js" type="module"></script>
     </body>
 </html>

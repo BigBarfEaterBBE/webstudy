@@ -1,6 +1,7 @@
 let numberOfCards = 5;
 let bgColor = "#111"
 let selectedDecks = ["Default"]
+let cardsCompletedThisSession = 0;
 
 //load storage
 chrome.storage.sync.get(["numCards", "bgColor", "selectedDecks"], async (data) => {
@@ -24,13 +25,12 @@ chrome.storage.sync.get(["numCards", "bgColor", "selectedDecks"], async (data) =
 chrome.runtime.onMessage.addListener((message) => {
     if (message.type === "settingsUpdated") {
         const { numCards, bgColor, selectedDecks: newDecks} = message.settings;
-        selectedDecks = newDecks;
+        const decksChanged = JSON.stringify(newDecks) !== JSON.stringify(selectedDecks);
         //update local
         const newCardCount = parseInt(numCards);
         applyTheme(bgColor);
         //appl
         document.body.style.background = bgColor;
-        const decksChanged = JSON.stringify(newDecks) !== Json.stringify(selectedDecks);
         selectedDecks = newDecks;
         if (newCardCount !== numberOfCards || decksChanged) {
             numberOfCards = newCardCount;
@@ -42,6 +42,9 @@ chrome.runtime.onMessage.addListener((message) => {
         }
         document.querySelector("h1").textContent = `Study ${numberOfCards} Anki Cards`;
         console.log("Live settings applied: ", message.settings);
+    }
+    if (message.type === "closeSettings") {
+        closeSettings();
     }
 });
 
@@ -87,7 +90,7 @@ async function loadCards() {
         return;
     }
     let deckQuery = selectedDecks.map(deck => `deck:"${deck}"`).join(" OR ");
-    let query = `(${deckQuery})`; //only due cards
+    let query = `(${deckQuery}) is:due`; //only due cards
     console.log("Decks being queried:", selectedDecks);
     console.log("Anki query:", query);
 
@@ -100,7 +103,12 @@ async function loadCards() {
         return;
     }
     //take first X cards
-    cardQueue = ids.slice(0, numberOfCards);
+    const remaining = Math.max(numberOfCards - cardsCompletedThisSession, 0);
+    if (remaining === 0) {
+        finishStudy();
+        return;
+    }
+    cardQueue = ids.slice(0, remaining);
     if (cardQueue.length === 0) {
         finishStudy();
         return;
@@ -137,13 +145,15 @@ async function sendReview(ease) {
             ease: ease
         }]
     });
+    cardsCompletedThisSession++;
     currentCardIndex++;
     loadNextCard();
 }
 
 function finishStudy() {
+    cardsCompletedThisSession = 0;
     cardDiv.innerHTML = "<h2>Done!</h2><p>Unlocking...</p>";
-    chrome.runtime.sendMessage("unlock");
+    chrome.runtime.sendMessage({ type: "unlock" });
 }
 
 flipBtn.addEventListener("click", flipCard);
@@ -154,9 +164,29 @@ reviewRow.querySelectorAll("button").forEach(btn => {
 });
 
 const settingsBtn = document.getElementById("settingsBtn");
-settingsBtn.addEventListener("click", () => {
-    window.open(chrome.runtime.getURL("settings.html"), "Settings", "width=300,height=250");
-});
+const settingsOverlay = document.getElementById("settingsOverlay");
+const closeSettingsBtn = document.getElementById("closeSettings");
+function openSettings() {
+    settingsOverlay.classList.add("active");
+    disableStudy();
+}
+
+function closeSettings() {
+    settingsOverlay.classList.remove("active");
+    enableStudy();
+}
+settingsBtn.addEventListener("click", openSettings);
+closeSettingsBtn.addEventListener("click", closeSettings);
+
+function disableStudy() {
+    flipBtn.disabled = true;
+    reviewRow.querySelectorAll("button").forEach(b => b.disabled = true);
+}
+
+function enableStudy() {
+    flipBtn.disabled = false;
+    reviewRow.querySelectorAll("button").forEach(b => b.disabled = false);
+}
 
 async function initStudy() {
     const data = await chrome.storage.sync.get([
